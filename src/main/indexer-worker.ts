@@ -15,11 +15,14 @@ interface ProgressMessage {
   percent: number
   recordsProcessed: number
   eta: number
+  warnings?: number
 }
 
 interface CompleteMessage {
   type: 'complete'
   totalRecords: number
+  warnings: number
+  skippedLines: number
 }
 
 interface ErrorMessage {
@@ -27,7 +30,18 @@ interface ErrorMessage {
   error: string
 }
 
-type WorkerMessage = ProgressMessage | CompleteMessage | ErrorMessage
+interface WarningMessage {
+  type: 'warning'
+  message: string
+  line: number
+}
+
+type WorkerMessage = ProgressMessage | CompleteMessage | ErrorMessage | WarningMessage
+
+// Track indexing warnings
+let warningCount = 0
+let skippedLines = 0
+const MAX_WARNINGS_TO_REPORT = 10
 
 function sendMessage(msg: WorkerMessage) {
   parentPort?.postMessage(msg)
@@ -176,7 +190,7 @@ async function indexCSV(filePath: string, fileId: string, indexDir: string) {
   fs.closeSync(fd)
 
   await writeIndexFiles(fileId, filePath, positions, searchLines, headers, stats, totalRecords, indexDir, 'csv', delimiter)
-  sendMessage({ type: 'complete', totalRecords })
+  sendMessage({ type: 'complete', totalRecords, warnings: warningCount, skippedLines })
 }
 
 async function indexJSON(filePath: string, fileId: string, indexDir: string) {
@@ -340,7 +354,7 @@ async function indexJSONArray(filePath: string, fileId: string, indexDir: string
   fs.closeSync(fd)
 
   await writeIndexFiles(fileId, filePath, positions, searchLines, headers, stats, totalRecords, indexDir, 'json-array')
-  sendMessage({ type: 'complete', totalRecords })
+  sendMessage({ type: 'complete', totalRecords, warnings: warningCount, skippedLines })
 }
 
 async function indexNDJSON(filePath: string, fileId: string, indexDir: string, fileSize: number) {
@@ -479,7 +493,7 @@ async function indexNDJSON(filePath: string, fileId: string, indexDir: string, f
   fs.closeSync(fd)
 
   await writeIndexFiles(fileId, filePath, positions, searchLines, headers, stats, totalRecords, indexDir, 'ndjson')
-  sendMessage({ type: 'complete', totalRecords })
+  sendMessage({ type: 'complete', totalRecords, warnings: warningCount, skippedLines })
 }
 
 async function indexVCF(filePath: string, fileId: string, indexDir: string) {
@@ -597,27 +611,80 @@ async function indexVCF(filePath: string, fileId: string, indexDir: string) {
   fs.closeSync(fd)
 
   await writeIndexFiles(fileId, filePath, positions, searchLines, headers, stats, totalRecords, indexDir, 'vcf')
-  sendMessage({ type: 'complete', totalRecords })
+  sendMessage({ type: 'complete', totalRecords, warnings: warningCount, skippedLines })
 }
 
+/**
+ * Parse a CSV line following RFC 4180 rules:
+ * - Fields may be enclosed in double quotes
+ * - Double quotes inside quoted fields are escaped by doubling them ("")
+ * - Fields containing the delimiter, newlines, or quotes must be quoted
+ */
 function parseCSVLine(line: string, delimiter: string = ','): string[] {
   const result: string[] = []
   let current = ''
   let inQuotes = false
+  let i = 0
 
-  for (let i = 0; i < line.length; i++) {
+  while (i < line.length) {
     const char = line[i]
+
     if (char === '"') {
-      inQuotes = !inQuotes
+      if (inQuotes) {
+        // Check if this is an escaped quote (double quote)
+        if (i + 1 < line.length && line[i + 1] === '"') {
+          current += '"'
+          i += 2
+          continue
+        }
+        // End of quoted field
+        inQuotes = false
+      } else {
+        // Start of quoted field (only valid at start of field or after delimiter)
+        inQuotes = true
+      }
     } else if (char === delimiter && !inQuotes) {
       result.push(current.trim())
       current = ''
     } else {
       current += char
     }
+    i++
   }
+
   result.push(current.trim())
   return result
+}
+
+/**
+ * Validate CSV structure and detect potential issues
+ */
+function validateCSVLine(line: string, delimiter: string, expectedColumns: number): {
+  valid: boolean
+  issue?: string
+} {
+  const values = parseCSVLine(line, delimiter)
+
+  if (values.length !== expectedColumns) {
+    return {
+      valid: false,
+      issue: `Expected ${expectedColumns} columns, got ${values.length}`,
+    }
+  }
+
+  // Check for unbalanced quotes
+  let quoteCount = 0
+  for (const char of line) {
+    if (char === '"') quoteCount++
+  }
+  if (quoteCount % 2 !== 0) {
+    return {
+      valid: false,
+      issue: 'Unbalanced quotes',
+    }
+  }
+
+  return { valid: true }
 }
 
 function extractSearchFields(headers: string[], values: string[]): string[] {

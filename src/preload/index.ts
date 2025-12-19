@@ -1,11 +1,13 @@
 import { contextBridge, ipcRenderer } from 'electron'
-import { ElectronAPI, PageQuery, SearchQuery, IndexProgress } from '../shared/types'
+import { ElectronAPI, PageQuery, SearchQuery, IndexProgress, ExportOptions } from '../shared/types'
 
 const api: ElectronAPI = {
   // File operations
   openFileDialog: () => ipcRenderer.invoke('file:open-dialog'),
   getFileInfo: (path) => ipcRenderer.invoke('file:info', path),
   getRecentFiles: () => ipcRenderer.invoke('file:recent'),
+  removeRecentFile: (fileId) => ipcRenderer.invoke('file:remove-recent', fileId),
+  clearAllData: () => ipcRenderer.invoke('file:clear-all'),
 
   // Indexing
   startIndexing: (path) => ipcRenderer.invoke('index:start', path),
@@ -21,6 +23,9 @@ const api: ElectronAPI = {
   search: (query) => ipcRenderer.invoke('data:search', query),
   getRecord: (fileId, index) => ipcRenderer.invoke('data:record', fileId, index),
   getStats: (fileId) => ipcRenderer.invoke('data:stats', fileId),
+
+  // Export
+  exportData: (options) => ipcRenderer.invoke('data:export', options),
 
   // App
   getAppVersion: () => ipcRenderer.invoke('app:version'),

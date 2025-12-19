@@ -1,11 +1,13 @@
 import { useState, useEffect, useCallback } from 'react'
-import { FileInfo, FileStats, PageResult, SearchResult } from '../../../shared/types'
+import { Download } from 'lucide-react'
+import { FileInfo, FileStats, PageResult, SearchResult, ExportOptions } from '../../../shared/types'
 import { DataTable } from './DataTable'
 import { Pagination } from './Pagination'
 import { RecordModal } from './RecordModal'
 import { Dashboard } from '../dashboard/Dashboard'
 import { SearchMode } from './SearchMode'
 import { formatNumber } from '../../lib/utils'
+import { notify } from '../../stores/notification-store'
 
 interface DataExplorerProps {
   file: {
@@ -24,10 +26,37 @@ export function DataExplorer({ file }: DataExplorerProps) {
   const [isLoading, setIsLoading] = useState(false)
   const [filters, setFilters] = useState<Record<string, string>>({})
   const [selectedRecord, setSelectedRecord] = useState<Record<string, unknown> | null>(null)
+  const [isExporting, setIsExporting] = useState(false)
+  const [exportMenuOpen, setExportMenuOpen] = useState(false)
 
   const columns = file.info.columns || []
 
-  const loadData = useCallback(async () => {
+  const handleExport = async (format: 'csv' | 'json') => {
+    setIsExporting(true)
+    setExportMenuOpen(false)
+
+    try {
+      const options: ExportOptions = {
+        fileId: file.info.id,
+        format,
+        filters: viewMode === 'browse' ? filters : undefined,
+      }
+
+      const result = await window.electronAPI.exportData(options)
+
+      if (result.success) {
+        notify.success('Export successful', `Saved to ${result.path}`)
+      } else if (result.error !== 'Export cancelled') {
+        notify.error('Export failed', result.error)
+      }
+    } catch (error) {
+      notify.error('Export failed', error instanceof Error ? error.message : 'Unknown error')
+    } finally {
+      setIsExporting(false)
+    }
+  }
+
+  const loadData = useCallback(async (retryCount = 0) => {
     if (viewMode !== 'browse') return
     setIsLoading(true)
     try {
@@ -37,13 +66,21 @@ export function DataExplorer({ file }: DataExplorerProps) {
         limit,
         filters,
       })
+
+      // If we got 0 records but the file should have records, retry after a short delay
+      // This handles the case where the database is still initializing
+      if (result.totalRecords === 0 && file.info.totalRecords && file.info.totalRecords > 0 && retryCount < 3) {
+        setTimeout(() => loadData(retryCount + 1), 200)
+        return
+      }
+
       setData(result)
     } catch (error) {
       console.error('Failed to load data:', error)
     } finally {
       setIsLoading(false)
     }
-  }, [file.info.id, page, limit, filters, viewMode])
+  }, [file.info.id, file.info.totalRecords, page, limit, filters, viewMode])
 
   useEffect(() => {
     loadData()
@@ -123,15 +160,54 @@ export function DataExplorer({ file }: DataExplorerProps) {
           )}
         </div>
 
-        {/* Clear filters (browse mode) */}
-        {viewMode === 'browse' && Object.keys(filters).length > 0 && (
-          <button
-            onClick={() => setFilters({})}
-            className="text-sm text-red-400 hover:text-red-300"
-          >
-            Clear filters
-          </button>
-        )}
+        <div className="flex items-center gap-2">
+          {/* Clear filters (browse mode) */}
+          {viewMode === 'browse' && Object.keys(filters).length > 0 && (
+            <button
+              onClick={() => setFilters({})}
+              className="text-sm text-red-400 hover:text-red-300"
+            >
+              Clear filters
+            </button>
+          )}
+
+          {/* Export button */}
+          {viewMode !== 'dashboard' && (
+            <div className="relative">
+              <button
+                onClick={() => setExportMenuOpen(!exportMenuOpen)}
+                disabled={isExporting}
+                className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-[#a1a1aa] hover:text-[#fafafa] bg-[#18181b] hover:bg-[#27272a] rounded-lg transition-colors disabled:opacity-50"
+              >
+                <Download className="w-4 h-4" />
+                {isExporting ? 'Exporting...' : 'Export'}
+              </button>
+
+              {exportMenuOpen && (
+                <>
+                  <div
+                    className="fixed inset-0 z-10"
+                    onClick={() => setExportMenuOpen(false)}
+                  />
+                  <div className="absolute right-0 top-full mt-1 z-20 bg-[#18181b] border border-[#27272a] rounded-lg shadow-lg py-1 min-w-[120px]">
+                    <button
+                      onClick={() => handleExport('csv')}
+                      className="w-full px-3 py-2 text-sm text-left text-[#a1a1aa] hover:text-[#fafafa] hover:bg-[#27272a] transition-colors"
+                    >
+                      Export as CSV
+                    </button>
+                    <button
+                      onClick={() => handleExport('json')}
+                      className="w-full px-3 py-2 text-sm text-left text-[#a1a1aa] hover:text-[#fafafa] hover:bg-[#27272a] transition-colors"
+                    >
+                      Export as JSON
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Content */}

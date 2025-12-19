@@ -21,6 +21,7 @@ interface AppState {
   setIndexing: (fileId: string, isIndexing: boolean) => void
   setIndexProgress: (fileId: string, progress: IndexProgress | null) => void
   setRecentFiles: (files: FileInfo[]) => void
+  removeRecentFile: (fileId: string) => void
   updateFileInfo: (fileId: string, info: Partial<FileInfo>) => void
 }
 
@@ -81,6 +82,10 @@ export const useAppStore = create<AppState>((set, get) => ({
   }),
 
   setRecentFiles: (files) => set({ recentFiles: files }),
+
+  removeRecentFile: (fileId) => set((state) => ({
+    recentFiles: state.recentFiles.filter(f => f.id !== fileId)
+  })),
 
   updateFileInfo: (fileId, info) => set((state) => {
     const files = new Map(state.files)

@@ -1,9 +1,12 @@
-import { useEffect } from 'react'
+import { useEffect, useCallback } from 'react'
 import { useAppStore } from './stores/app-store'
+import { notify } from './stores/notification-store'
+import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts'
 import { Sidebar } from './components/layout/Sidebar'
 import { TabBar } from './components/layout/TabBar'
 import { FileDropzone } from './components/file/FileDropzone'
 import { DataExplorer } from './components/explorer/DataExplorer'
+import { ToastContainer } from './components/ui/Toast'
 
 declare global {
   interface Window {
@@ -14,6 +17,9 @@ declare global {
 export default function App() {
   const { files, activeFileId, setRecentFiles, setIndexProgress, updateFileInfo, setIndexing } = useAppStore()
   const activeFile = activeFileId ? files.get(activeFileId) : null
+
+  // Enable keyboard shortcuts
+  useKeyboardShortcuts()
 
   useEffect(() => {
     // Load recent files on mount
@@ -36,9 +42,19 @@ export default function App() {
           // Also refresh recent files
           const recentFiles = await window.electronAPI.getRecentFiles()
           useAppStore.getState().setRecentFiles(recentFiles)
+
+          // Show success notification
+          notify.success(
+            'Indexation complete',
+            `${file.info.name} - ${info.totalRecords?.toLocaleString()} records indexed`
+          )
         }
-      } else if (progress.status === 'error' || progress.status === 'cancelled') {
+      } else if (progress.status === 'error') {
         store.setIndexing(progress.fileId, false)
+        notify.error('Indexation error', progress.error || 'An unknown error occurred')
+      } else if (progress.status === 'cancelled') {
+        store.setIndexing(progress.fileId, false)
+        notify.warning('Indexation cancelled')
       }
     })
 
@@ -62,7 +78,10 @@ export default function App() {
         <div className="flex-1 overflow-hidden">
           {activeFile ? (
             activeFile.info.indexed ? (
-              <DataExplorer file={activeFile} />
+              <DataExplorer
+                key={`${activeFile.info.id}-${activeFile.info.indexed}-${activeFile.info.totalRecords}-${activeFile.info.indexedAt}`}
+                file={activeFile}
+              />
             ) : (
               <FileDropzone file={activeFile} />
             )
@@ -71,6 +90,9 @@ export default function App() {
           )}
         </div>
       </div>
+
+      {/* Toast notifications */}
+      <ToastContainer />
     </div>
   )
 }

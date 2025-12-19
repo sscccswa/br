@@ -1,10 +1,26 @@
-import { app, BrowserWindow, ipcMain, dialog } from 'electron'
+import { app, BrowserWindow, ipcMain, dialog, session } from 'electron'
 import * as path from 'path'
 import * as fs from 'fs'
 import { autoUpdater } from 'electron-updater'
 import { setupIpcHandlers } from './ipc-handlers'
 
 const isDev = !app.isPackaged
+
+// Security: Disable navigation to external URLs
+app.on('web-contents-created', (_, contents) => {
+  contents.on('will-navigate', (event, navigationUrl) => {
+    const parsedUrl = new URL(navigationUrl)
+    // Only allow navigation to our own pages
+    if (parsedUrl.origin !== 'http://localhost:5173' && !navigationUrl.startsWith('file://')) {
+      event.preventDefault()
+    }
+  })
+
+  // Prevent new window creation
+  contents.setWindowOpenHandler(() => {
+    return { action: 'deny' }
+  })
+})
 
 // Configure auto-updater
 autoUpdater.autoDownload = false
@@ -67,15 +83,15 @@ app.whenReady().then(() => {
   createWindow()
   setupIpcHandlers(mainWindow!)
 
-  // Check for updates (only in production)
-  if (!isDev) {
-    autoUpdater.checkForUpdates().catch(() => {})
-
-    // Check for updates every 30 minutes
-    setInterval(() => {
-      autoUpdater.checkForUpdates().catch(() => {})
-    }, 30 * 60 * 1000)
-  }
+  // Automatic update checks disabled - use manual check button instead
+  // if (!isDev) {
+  //   autoUpdater.checkForUpdates().catch(() => {})
+  //
+  //   // Check for updates every 30 minutes
+  //   setInterval(() => {
+  //     autoUpdater.checkForUpdates().catch(() => {})
+  //   }, 30 * 60 * 1000)
+  // }
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
