@@ -149,7 +149,7 @@ ipcMain.handle('update:download', async () => {
 })
 
 ipcMain.handle('update:install', () => {
-  autoUpdater.quitAndInstall()
+  autoUpdater.quitAndInstall(true, true) // isSilent=true, isForceRunAfter=true
 })
 
 app.on('window-all-closed', () => {

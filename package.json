@@ -1,6 +1,6 @@
 {
   "name": "breach-explorer",
-  "version": "1.4.4",
+  "version": "1.5.0",
   "description": "Explore large JSON and CSV data files with ease",
   "main": "dist/main/index.js",
   "scripts": {
@@ -108,17 +108,17 @@
       "icon": "resources/icon.ico"
     },
     "nsis": {
-      "oneClick": false,
-      "allowToChangeInstallationDirectory": true,
+      "oneClick": true,
+      "perMachine": false,
+      "allowElevation": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "shortcutName": "Breach Explorer",
       "runAfterFinish": true,
       "installerIcon": "resources/icon.ico",
       "uninstallerIcon": "resources/icon.ico",
-      "installerSidebar": "resources/installerSidebar.bmp",
-      "uninstallerSidebar": "resources/installerSidebar.bmp",
-      "artifactName": "Breach_Explorer_${version}_Installer.${ext}"
+      "artifactName": "Breach_Explorer_${version}_Installer.${ext}",
+      "deleteAppDataOnUninstall": false
     },
     "portable": {
       "artifactName": "Breach_Explorer_${version}_Portable.${ext}"

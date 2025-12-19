@@ -13,6 +13,7 @@ export function Sidebar() {
   const [updateStatus, setUpdateStatus] = useState<UpdateStatus>(null)
   const [updateVersion, setUpdateVersion] = useState<string | null>(null)
   const [downloadPercent, setDownloadPercent] = useState(0)
+  const [displayPercent, setDisplayPercent] = useState(0)
   const [isCheckingUpdate, setIsCheckingUpdate] = useState(false)
   const [appVersion, setAppVersion] = useState<string>('')
   const statusTimeoutRef = useRef<NodeJS.Timeout | null>(null)
@@ -20,6 +21,16 @@ export function Sidebar() {
   useEffect(() => {
     window.electronAPI.getAppVersion().then(setAppVersion)
   }, [])
+
+  // Smooth progress animation
+  useEffect(() => {
+    if (displayPercent < downloadPercent) {
+      const timer = setTimeout(() => {
+        setDisplayPercent(prev => Math.min(prev + 0.5, downloadPercent))
+      }, 16)
+      return () => clearTimeout(timer)
+    }
+  }, [displayPercent, downloadPercent])
 
   // Filter out files that are currently open in tabs
   const openFileIds = new Set(files.keys())
@@ -29,7 +40,13 @@ export function Sidebar() {
     const unsubscribe = window.electronAPI.onUpdateStatus((data) => {
       setUpdateStatus(data.status as UpdateStatus)
       if (data.version) setUpdateVersion(data.version)
-      if (data.percent) setDownloadPercent(data.percent)
+      if (data.percent) {
+        setDownloadPercent(data.percent)
+      }
+      if (data.status !== 'downloading') {
+        setDisplayPercent(0)
+        setDownloadPercent(0)
+      }
 
       // Show toast notifications for certain statuses
       if (data.status === 'up-to-date') {
@@ -238,7 +255,7 @@ export function Sidebar() {
                 {updateStatus === 'downloading' && (
                   <div className="flex items-center gap-2 text-xs text-blue-400">
                     <RefreshCw className="w-3.5 h-3.5 animate-spin flex-shrink-0" />
-                    <span className="truncate">{Math.round(downloadPercent)}%</span>
+                    <span className="truncate">{Math.round(displayPercent)}%</span>
                   </div>
                 )}
                 {updateStatus === 'ready' && (
