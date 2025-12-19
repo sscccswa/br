@@ -25,6 +25,7 @@ app.on('web-contents-created', (_, contents) => {
 // Configure auto-updater
 autoUpdater.autoDownload = false
 autoUpdater.autoInstallOnAppQuit = true
+autoUpdater.allowPrerelease = true
 
 let mainWindow: BrowserWindow | null = null
 
