@@ -211,19 +211,19 @@ export function Sidebar() {
           </div>
 
           {/* Update check & version */}
-          <div className="border-t border-[#27272a] p-3 space-y-2">
-            <div className="flex items-center justify-between">
-              <div className="flex-1">
+          <div className="border-t border-[#27272a] p-3">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex-1 min-w-0">
                 {(updateStatus === 'checking' || isCheckingUpdate) && (
                   <div className="flex items-center gap-2 text-xs text-[#71717a]">
-                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                    <span>Checking...</span>
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin flex-shrink-0" />
+                    <span className="truncate">Checking...</span>
                   </div>
                 )}
                 {updateStatus === 'up-to-date' && !isCheckingUpdate && (
                   <div className="flex items-center gap-2 text-xs text-emerald-500/80">
-                    <Check className="w-3.5 h-3.5" />
-                    <span>Up to date</span>
+                    <Check className="w-3.5 h-3.5 flex-shrink-0" />
+                    <span className="truncate">Up to date</span>
                   </div>
                 )}
                 {updateStatus === 'available' && !isCheckingUpdate && (
@@ -231,19 +231,14 @@ export function Sidebar() {
                     onClick={() => window.electronAPI.downloadUpdate()}
                     className="flex items-center gap-2 text-xs text-blue-400 hover:text-blue-300 transition-colors"
                   >
-                    <Download className="w-3.5 h-3.5" />
-                    <span>Download v{updateVersion}</span>
+                    <Download className="w-3.5 h-3.5 flex-shrink-0" />
+                    <span className="truncate">Download v{updateVersion}</span>
                   </button>
                 )}
                 {updateStatus === 'downloading' && (
-                  <div className="space-y-1.5">
-                    <div className="flex items-center gap-2 text-xs text-blue-400">
-                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                      <span>Downloading {Math.round(downloadPercent)}%</span>
-                    </div>
-                    <div className="h-1 bg-[#27272a] rounded-full overflow-hidden">
-                      <div className="h-full bg-blue-500 transition-all" style={{ width: `${downloadPercent}%` }} />
-                    </div>
+                  <div className="flex items-center gap-2 text-xs text-blue-400">
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin flex-shrink-0" />
+                    <span className="truncate">{Math.round(downloadPercent)}%</span>
                   </div>
                 )}
                 {updateStatus === 'ready' && (
@@ -251,8 +246,8 @@ export function Sidebar() {
                     onClick={() => window.electronAPI.installUpdate()}
                     className="flex items-center gap-2 text-xs text-emerald-400 hover:text-emerald-300 transition-colors"
                   >
-                    <RefreshCw className="w-3.5 h-3.5" />
-                    <span>Install & restart</span>
+                    <RefreshCw className="w-3.5 h-3.5 flex-shrink-0" />
+                    <span className="truncate">Install & restart</span>
                   </button>
                 )}
                 {!isCheckingUpdate && (updateStatus === null || updateStatus === 'error') && (
@@ -260,24 +255,25 @@ export function Sidebar() {
                     onClick={handleCheckUpdate}
                     className="flex items-center gap-2 text-xs text-[#71717a] hover:text-[#a1a1aa] transition-colors"
                   >
-                    <RefreshCw className="w-3.5 h-3.5" />
-                    <span>Check for updates</span>
+                    <RefreshCw className="w-3.5 h-3.5 flex-shrink-0" />
+                    <span className="truncate">Check for updates</span>
                   </button>
                 )}
               </div>
+
+              {/* Report bug */}
+              <button
+                onClick={() => window.open('https://github.com/sscccswa/br/issues', '_blank')}
+                className="p-1 text-[#52525b] hover:text-[#a1a1aa] transition-colors flex-shrink-0"
+                title="Report a bug"
+              >
+                <Bug className="w-3.5 h-3.5" />
+              </button>
+
               {appVersion && (
-                <span className="text-xs text-[#52525b] font-mono">v{appVersion}</span>
+                <span className="text-xs text-[#52525b] font-mono flex-shrink-0">v{appVersion}</span>
               )}
             </div>
-
-            {/* Report bug */}
-            <button
-              onClick={() => window.open('https://github.com/sscccswa/br/issues', '_blank')}
-              className="flex items-center gap-2 text-xs text-[#71717a] hover:text-[#a1a1aa] transition-colors"
-            >
-              <Bug className="w-3.5 h-3.5" />
-              <span>Report a bug</span>
-            </button>
           </div>
         </>
       )}

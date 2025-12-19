@@ -122,8 +122,9 @@ autoUpdater.on('update-downloaded', (info) => {
   mainWindow?.webContents.send('update:status', { status: 'ready', version: info.version })
 })
 
-autoUpdater.on('error', () => {
-  mainWindow?.webContents.send('update:status', { status: 'error' })
+autoUpdater.on('error', (error) => {
+  console.error('Auto-updater error:', error)
+  mainWindow?.webContents.send('update:status', { status: 'error', message: error?.message })
 })
 
 // IPC handlers for updates
@@ -132,8 +133,9 @@ ipcMain.handle('update:check', async () => {
   try {
     const result = await autoUpdater.checkForUpdates()
     return { status: 'ok', version: result?.updateInfo?.version }
-  } catch {
-    return { status: 'error' }
+  } catch (error) {
+    console.error('Update check error:', error)
+    return { status: 'error', message: error instanceof Error ? error.message : 'Unknown error' }
   }
 })
 
