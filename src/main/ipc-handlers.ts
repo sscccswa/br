@@ -1,4 +1,4 @@
-import { ipcMain, dialog, BrowserWindow, app } from 'electron'
+import { ipcMain, dialog, BrowserWindow, app, shell } from 'electron'
 import * as path from 'path'
 import * as fs from 'fs'
 import * as crypto from 'crypto'
@@ -278,6 +278,13 @@ export function setupIpcHandlers(mainWindow: BrowserWindow) {
   // App version
   ipcMain.handle('app:version', safeHandler(async () => {
     return app.getVersion()
+  }))
+
+  // Open external URL
+  ipcMain.handle('app:open-external', safeHandler(async (url: unknown) => {
+    if (typeof url === 'string' && (url.startsWith('https://') || url.startsWith('http://'))) {
+      await shell.openExternal(url)
+    }
   }))
 
   // Window controls

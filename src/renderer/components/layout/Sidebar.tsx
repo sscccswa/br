@@ -263,7 +263,7 @@ export function Sidebar() {
 
               {/* Report bug */}
               <button
-                onClick={() => window.open('https://github.com/sscccswa/br/issues', '_blank')}
+                onClick={() => window.electronAPI.openExternal('https://github.com/sscccswa/br/issues')}
                 className="p-1 text-[#52525b] hover:text-[#a1a1aa] transition-colors flex-shrink-0"
                 title="Report a bug"
               >

@@ -139,6 +139,7 @@ export interface ElectronAPI {
 
   // App
   getAppVersion: () => Promise<string>
+  openExternal: (url: string) => Promise<void>
 
   // Window controls
   windowMinimize: () => Promise<void>

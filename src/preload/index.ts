@@ -29,6 +29,7 @@ const api: ElectronAPI = {
 
   // App
   getAppVersion: () => ipcRenderer.invoke('app:version'),
+  openExternal: (url: string) => ipcRenderer.invoke('app:open-external', url),
 
   // Window controls
   windowMinimize: () => ipcRenderer.invoke('window:minimize'),
